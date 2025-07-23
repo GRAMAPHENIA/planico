@@ -1,103 +1,212 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { useWeekGrid } from '@/hooks/useWeekGrid';
+import { WeekNavigation } from '@/components/schedule/WeekNavigation';
+import { ScheduleBlock } from '@/components/schedule/ScheduleBlock';
+import { BlockForm } from '@/components/schedule/BlockForm';
+import { Header } from '@/components/layout/Header';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import type { ScheduleBlock as ScheduleBlockType, Category, BlockFormData } from '@/lib/types';
+
+// Mock data for demonstration
+const mockCategories: Category[] = [
+  { id: '1', name: 'Trabajo', color: '#3B82F6' },
+  { id: '2', name: 'Personal', color: '#22C55E' },
+  { id: '3', name: 'Ejercicio', color: '#EF4444' },
+  { id: '4', name: 'Estudio', color: '#8B5CF6' },
+];
+
+const mockBlocks: ScheduleBlockType[] = [
+  {
+    id: '1',
+    title: 'Reunión de equipo',
+    description: 'Revisión semanal del proyecto',
+    startTime: new Date(2025, 0, 20, 9, 0), // Monday 9:00 AM
+    endTime: new Date(2025, 0, 20, 10, 30), // Monday 10:30 AM
+    categoryId: '1',
+    category: mockCategories[0],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: '2',
+    title: 'Ejercicio',
+    description: 'Rutina de cardio',
+    startTime: new Date(2025, 0, 21, 7, 0), // Tuesday 7:00 AM
+    endTime: new Date(2025, 0, 21, 8, 0), // Tuesday 8:00 AM
+    categoryId: '3',
+    category: mockCategories[2],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: '3',
+    title: 'Almuerzo con cliente',
+    description: 'Presentación de propuesta',
+    startTime: new Date(2025, 0, 22, 13, 0), // Wednesday 1:00 PM
+    endTime: new Date(2025, 0, 22, 14, 30), // Wednesday 2:30 PM
+    categoryId: '1',
+    category: mockCategories[0],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const weekGrid = useWeekGrid();
+  const [blocks, setBlocks] = useState<ScheduleBlockType[]>(mockBlocks);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingBlock, setEditingBlock] = useState<ScheduleBlockType | undefined>();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Handle block creation/editing
+  const handleSaveBlock = async (data: BlockFormData) => {
+    if (editingBlock) {
+      // Update existing block
+      const updatedBlock: ScheduleBlockType = {
+        ...editingBlock,
+        ...data,
+        category: mockCategories.find(cat => cat.id === data.categoryId) || mockCategories[0],
+        updatedAt: new Date(),
+      };
+      setBlocks(prev => prev.map(block => 
+        block.id === editingBlock.id ? updatedBlock : block
+      ));
+    } else {
+      // Create new block
+      const newBlock: ScheduleBlockType = {
+        id: `block-${Date.now()}`,
+        ...data,
+        category: mockCategories.find(cat => cat.id === data.categoryId) || mockCategories[0],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setBlocks(prev => [...prev, newBlock]);
+    }
+    
+    setIsFormOpen(false);
+    setEditingBlock(undefined);
+  };
+
+  // Handle block deletion
+  const handleDeleteBlock = async (blockId: string) => {
+    setBlocks(prev => prev.filter(block => block.id !== blockId));
+  };
+
+  // Handle block editing
+  const handleEditBlock = (block: ScheduleBlockType) => {
+    setEditingBlock(block);
+    setIsFormOpen(true);
+  };
+
+  // Handle form cancellation
+  const handleCancelForm = () => {
+    setIsFormOpen(false);
+    setEditingBlock(undefined);
+  };
+
+  // Filter blocks for current week
+  const currentWeekBlocks = blocks.filter(block => 
+    weekGrid.isInCurrentWeek(block.startTime)
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <Header />
+      
+      {/* Action Bar */}
+      <div className="border-b bg-card/50 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Planificador semanal</p>
+            </div>
+            
+            <Button onClick={() => setIsFormOpen(true)} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Nuevo Bloque
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6 space-y-6">
+        {/* Week Navigation */}
+        <WeekNavigation
+          currentWeek={weekGrid.currentWeek}
+          weekInfo={weekGrid.weekInfo}
+          onNavigateWeek={weekGrid.navigateWeek}
+          onGoToCurrentWeek={weekGrid.goToCurrentWeek}
+        />
+
+        {/* Schedule Grid */}
+        <div className="bg-card rounded-lg border shadow-sm">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-card-foreground">Horario de la Semana</h2>
+              <div className="text-sm text-muted-foreground">
+                {currentWeekBlocks.length} bloque{currentWeekBlocks.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+
+            {/* Schedule Blocks Display */}
+            <div className="space-y-4">
+              {currentWeekBlocks.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p className="text-lg mb-2">No hay bloques programados para esta semana</p>
+                  <p className="text-sm">Haz clic en "Nuevo Bloque" para agregar tu primer evento</p>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {currentWeekBlocks.map((block) => {
+                    const gridPosition = weekGrid.getBlockPosition(block);
+                    return (
+                      <div key={block.id} className="relative">
+                        <ScheduleBlock
+                          block={block}
+                          gridPosition={gridPosition}
+                          onEdit={() => handleEditBlock(block)}
+                          onDelete={() => handleDeleteBlock(block.id)}
+                          className="w-full"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Categories Legend */}
+        <div className="bg-card rounded-lg border shadow-sm p-6">
+          <h3 className="text-lg font-semibold mb-4 text-card-foreground">Categorías</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {mockCategories.map((category) => (
+              <div key={category.id} className="flex items-center gap-2">
+                <div
+                  className="w-4 h-4 rounded-full"
+                  style={{ backgroundColor: category.color }}
+                />
+                <span className="text-sm font-medium text-card-foreground">{category.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+      {/* Block Form Modal */}
+      <BlockForm
+        block={editingBlock}
+        categories={mockCategories}
+        onSave={handleSaveBlock}
+        onCancel={handleCancelForm}
+        isOpen={isFormOpen}
+        weekStart={weekGrid.weekInfo.start}
+      />
     </div>
   );
 }

@@ -98,22 +98,36 @@
     - Implement URL state management for current week
     - _Requirements: 2.1, 2.4, 6.1, 6.2, 6.3_
 
-- [ ] 6. Build core UI components
-  - [ ] 6.1 Create ScheduleBlock component
+- [x] 6. Build core UI components
+
+
+
+
+
+
+  - [x] 6.1 Create ScheduleBlock component
+
+
+
+
     - Implement block display with title, time, and category color
     - Add click handlers for edit and delete actions
     - Create responsive design for different screen sizes
     - Add hover effects and visual feedback
     - _Requirements: 1.3, 2.3, 4.1, 4.2, 5.2_
 
-  - [ ] 6.2 Create BlockForm component
+  - [x] 6.2 Create BlockForm component
+
+
     - Build form for creating and editing schedule blocks
     - Implement time picker and category selector
     - Add form validation with real-time feedback
     - Create modal/dialog wrapper for the form
     - _Requirements: 1.1, 1.2, 4.1, 4.4, 5.1, 5.4_
 
-  - [ ] 6.3 Create WeekNavigation component
+  - [x] 6.3 Create WeekNavigation component
+
+
     - Implement previous/next week navigation buttons
     - Add current week indicator and date display
     - Create quick jump to current week functionality
