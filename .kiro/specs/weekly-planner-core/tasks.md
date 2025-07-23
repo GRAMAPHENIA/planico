@@ -1,6 +1,11 @@
 # Implementation Plan - Planico Weekly Planner Core
 
-- [ ] 1. Setup project dependencies and configuration
+- [x] 1. Setup project dependencies and configuration
+
+
+
+
+
   - Install and configure Prisma with SQLite database
   - Install ShadCN/UI components and configure theme
   - Install additional dependencies (zod, date-fns, clsx)
