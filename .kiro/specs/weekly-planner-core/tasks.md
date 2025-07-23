@@ -3,9 +3,6 @@
 - [x] 1. Setup project dependencies and configuration
 
 
-
-
-
   - Install and configure Prisma with SQLite database
   - Install ShadCN/UI components and configure theme
   - Install additional dependencies (zod, date-fns, clsx)
@@ -14,12 +11,7 @@
 
 - [x] 2. Create database schema and setup
 
-
-
-
-
   - [x] 2.1 Define Prisma schema for ScheduleBlock and Category models
-
 
     - Create schema.prisma with ScheduleBlock and Category models
     - Define relationships and constraints
@@ -36,14 +28,7 @@
 
 - [x] 3. Create core TypeScript types and utilities
 
-
-
-
-
-
   - [x] 3.1 Define TypeScript interfaces and types
-
-
 
 
     - Create types for ScheduleBlock, Category, TimeSlot, GridPosition
@@ -55,79 +40,59 @@
   - [x] 3.2 Implement utility functions
 
 
-
     - Create date manipulation utilities (week calculation, time slots)
     - Implement grid position calculation functions
     - Create color and category helper functions
     - _Requirements: 2.2, 6.1, 6.3_
 
-- [ ] 4. Build API routes for schedule management
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- [x] 4. Build API routes for schedule management
 
   - [x] 4.1 Create schedule CRUD API routes
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     - Implement GET /api/schedule for fetching blocks by week
-
 
     - Implement POST /api/schedule for creating new blocks
     - Implement PUT /api/schedule/[id] for updating blocks
     - Implement DELETE /api/schedule/[id] for deleting blocks
     - _Requirements: 1.1, 1.2, 1.4, 3.1, 3.2_
 
-
-
-
   - [x] 4.2 Add error handling and validation to API routes
-
-
-
-
 
     - Implement Zod validation for request bodies
     - Add proper error responses and status codes
     - Create error handling middleware
     - _Requirements: 3.3, 4.4_
 
-- [ ] 5. Create custom hooks for data management
-  - [ ] 5.1 Implement useScheduleBlocks hook
+- [x] 5. Create custom hooks for data management
+
+
+
+
+
+
+
+
+  - [x] 5.1 Implement useScheduleBlocks hook
+
+
+
+
+
+
+
+
     - Create hook for fetching, creating, updating, and deleting blocks
     - Add loading states and error handling
     - Implement optimistic updates for better UX
     - _Requirements: 1.1, 1.2, 1.4, 3.1, 3.2_
 
-  - [ ] 5.2 Implement useWeekGrid hook
+  - [x] 5.2 Implement useWeekGrid hook
+
+
+
+
+
     - Create hook for week navigation and time slot generation
     - Add functions for calculating grid positions
     - Implement URL state management for current week

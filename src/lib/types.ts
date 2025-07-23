@@ -98,6 +98,15 @@ export interface UseWeekGridReturn {
   goToWeek: (date: Date) => void;
   goToCurrentWeek: () => void;
   getBlockPosition: (block: ScheduleBlock) => GridPosition;
+  
+  // Additional helper methods
+  isInCurrentWeek: (date: Date) => boolean;
+  getDateForTimeSlot: (slot: TimeSlot) => Date;
+  isCurrentWeek: boolean;
+  weekRangeString: string;
+  getTimeSlotLabel: (slot: TimeSlot) => string;
+  getDayLabel: (dayIndex: number, format?: 'short' | 'long') => string;
+  isBusinessHour: (slot: TimeSlot, startHour?: number, endHour?: number) => boolean;
 }
 
 // Utility types
