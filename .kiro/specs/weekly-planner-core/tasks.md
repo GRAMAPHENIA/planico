@@ -12,14 +12,23 @@
   - Configure TypeScript paths and imports
   - _Requirements: 3.1, 4.1_
 
-- [ ] 2. Create database schema and setup
-  - [ ] 2.1 Define Prisma schema for ScheduleBlock and Category models
+- [x] 2. Create database schema and setup
+
+
+
+
+
+  - [x] 2.1 Define Prisma schema for ScheduleBlock and Category models
+
+
     - Create schema.prisma with ScheduleBlock and Category models
     - Define relationships and constraints
     - Add default categories (Work, Personal, Exercise, Study)
     - _Requirements: 3.1, 5.1, 5.2_
 
-  - [ ] 2.2 Initialize database and run migrations
+  - [x] 2.2 Initialize database and run migrations
+
+
     - Generate Prisma client
     - Create and run initial migration
     - Seed database with default categories

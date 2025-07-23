@@ -9,3 +9,26 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
+model ScheduleBlock {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("schedule_blocks")
+}
+
+model Category {
+  id     String @id @default(cuid())
+  name   String @unique
+  color  String // Hex color code
+  blocks ScheduleBlock[]
+  
+  @@map("categories")
+}
