@@ -34,14 +34,28 @@
     - Seed database with default categories
     - _Requirements: 3.1, 5.2_
 
-- [ ] 3. Create core TypeScript types and utilities
-  - [ ] 3.1 Define TypeScript interfaces and types
+- [x] 3. Create core TypeScript types and utilities
+
+
+
+
+
+
+  - [x] 3.1 Define TypeScript interfaces and types
+
+
+
+
     - Create types for ScheduleBlock, Category, TimeSlot, GridPosition
     - Define form data types and API response types
     - Create validation schemas with Zod
     - _Requirements: 1.1, 1.2, 3.1, 5.1_
 
-  - [ ] 3.2 Implement utility functions
+
+  - [x] 3.2 Implement utility functions
+
+
+
     - Create date manipulation utilities (week calculation, time slots)
     - Implement grid position calculation functions
     - Create color and category helper functions
