@@ -62,14 +62,59 @@
     - _Requirements: 2.2, 6.1, 6.3_
 
 - [ ] 4. Build API routes for schedule management
-  - [ ] 4.1 Create schedule CRUD API routes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  - [x] 4.1 Create schedule CRUD API routes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     - Implement GET /api/schedule for fetching blocks by week
+
+
     - Implement POST /api/schedule for creating new blocks
     - Implement PUT /api/schedule/[id] for updating blocks
     - Implement DELETE /api/schedule/[id] for deleting blocks
     - _Requirements: 1.1, 1.2, 1.4, 3.1, 3.2_
 
-  - [ ] 4.2 Add error handling and validation to API routes
+
+
+
+  - [x] 4.2 Add error handling and validation to API routes
+
+
+
+
+
     - Implement Zod validation for request bodies
     - Add proper error responses and status codes
     - Create error handling middleware
