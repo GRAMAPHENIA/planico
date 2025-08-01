@@ -169,7 +169,8 @@ export class InputSanitizer {
 // Request logging utility
 export class RequestLogger {
   static log(request: NextRequest, response?: NextResponse): void {
-    if (process.env.NODE_ENV === 'development') {
+    // Solo log si está explícitamente habilitado
+    if (process.env.NODE_ENV === 'development' && process.env.PRISMA_LOG_LEVEL === 'verbose') {
       const timestamp = new Date().toISOString();
       const method = request.method;
       const url = request.url;

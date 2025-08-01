@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { startOfWeek, endOfWeek } from 'date-fns';
 import type { 
   ScheduleBlock, 
@@ -89,6 +89,11 @@ export function useScheduleBlocks(options: UseScheduleBlocksOptions = {}): UseSc
 
       return fetchedBlocks;
     } catch (err) {
+      // Ignore AbortError - it's expected when cancelling requests
+      if (err instanceof Error && err.name === 'AbortError') {
+        return [];
+      }
+      
       if (!abortController.signal.aborted) {
         const errorMessage = handleApiError(err);
         setError(errorMessage);
@@ -102,8 +107,16 @@ export function useScheduleBlocks(options: UseScheduleBlocksOptions = {}): UseSc
     }
   }, [weekDate, makeApiRequest, handleApiError]);
 
-  // Create a new block
-  const createBlock = useCallback(async (data: CreateBlockData): Promise<void> => {
+  // Create a new block with enhanced functionality
+  const createBlock = useCallback(async (
+    data: CreateBlockData,
+    options?: {
+      onSuccess?: (block: ScheduleBlock) => void;
+      onConflict?: (conflicts: ScheduleBlock[]) => void;
+      enableReminders?: boolean;
+      syncToCalendar?: 'google' | 'outlook' | 'ics' | null;
+    }
+  ): Promise<ScheduleBlock> => {
     setError(null);
     
     // Optimistic update
@@ -137,14 +150,23 @@ export function useScheduleBlocks(options: UseScheduleBlocksOptions = {}): UseSc
       } else {
         setBlocks(prev => [...prev, newBlock]);
       }
+
+      // Call success callback
+      options?.onSuccess?.(newBlock);
+
+      return newBlock;
     } catch (err) {
       // Revert optimistic update on error
       if (enableOptimisticUpdates && optimisticBlock) {
         setBlocks(prev => prev.filter(block => block.id !== optimisticBlock!.id));
       }
       
-      const errorMessage = handleApiError(err);
-      setError(errorMessage);
+      // Don't set general error state for conflict errors - let the UI handle them specifically
+      if (!(err instanceof Error && err.message.includes('se superpone'))) {
+        const errorMessage = handleApiError(err);
+        setError(errorMessage);
+      }
+      
       throw err;
     }
   }, [enableOptimisticUpdates, makeApiRequest, handleApiError]);
@@ -190,8 +212,12 @@ export function useScheduleBlocks(options: UseScheduleBlocksOptions = {}): UseSc
         ));
       }
       
-      const errorMessage = handleApiError(err);
-      setError(errorMessage);
+      // Don't set general error state for conflict errors - let the UI handle them specifically
+      if (!(err instanceof Error && err.message.includes('se superpone'))) {
+        const errorMessage = handleApiError(err);
+        setError(errorMessage);
+      }
+      
       throw err;
     }
   }, [blocks, enableOptimisticUpdates, makeApiRequest, handleApiError]);
@@ -234,8 +260,24 @@ export function useScheduleBlocks(options: UseScheduleBlocksOptions = {}): UseSc
 
   // Refetch blocks (useful for manual refresh)
   const refetch = useCallback(async (): Promise<void> => {
-    await fetchBlocks(currentWeekRef.current);
+    try {
+      await fetchBlocks(currentWeekRef.current);
+    } catch (error) {
+      // Ignore AbortError - it's expected when cancelling requests
+      if (error instanceof Error && error.name !== 'AbortError') {
+        throw error;
+      }
+    }
   }, [fetchBlocks]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   return {
     blocks,

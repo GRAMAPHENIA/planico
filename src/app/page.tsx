@@ -4,15 +4,22 @@ import { useState, useEffect, useCallback } from 'react';
 import { useWeekGrid } from '@/hooks/useWeekGrid';
 import { useScheduleBlocks } from '@/hooks/useScheduleBlocks';
 import { useCategories } from '@/hooks/useCategories';
+import { useToast } from '@/hooks/useToast';
 import { WeekNavigation } from '@/components/schedule/WeekNavigation';
 import { WeekGrid } from '@/components/schedule/WeekGrid';
 import { BlockForm } from '@/components/schedule/BlockForm';
 import { Header } from '@/components/layout/Header';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
+import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, AlertCircle, RefreshCw, Calendar, Loader2 } from 'lucide-react';
+import { Plus, AlertCircle, RefreshCw, Calendar, Loader2, Bell, Download } from 'lucide-react';
 import type { ScheduleBlock as ScheduleBlockType, BlockFormData, TimeSlot } from '@/lib/types';
+import { ConflictChecker } from '@/lib/conflict-checker';
+import { ReminderService } from '@/lib/reminders';
+import { CalendarSyncService } from '@/lib/calendar-sync';
+import { MetricsCalculator } from '@/lib/metrics';
+import { differenceInMinutes } from 'date-fns';
 
 
 
@@ -24,12 +31,30 @@ export default function Home() {
     enableOptimisticUpdates: true 
   });
   const categories = useCategories();
+  const { toast, toasts } = useToast();
 
   // UI state management
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<ScheduleBlockType | undefined>();
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | undefined>();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [metrics, setMetrics] = useState(() => 
+    MetricsCalculator.calculateWeeklyMetrics(scheduleBlocks.blocks, weekGrid.currentWeek)
+  );
+
+  // Request notification permission on mount
+  useEffect(() => {
+    ReminderService.requestNotificationPermission();
+  }, []);
+
+  // Update metrics when blocks change
+  useEffect(() => {
+    const updatedMetrics = MetricsCalculator.calculateWeeklyMetrics(
+      scheduleBlocks.blocks, 
+      weekGrid.currentWeek
+    );
+    setMetrics(updatedMetrics);
+  }, [scheduleBlocks.blocks, weekGrid.currentWeek]);
 
   // Fetch blocks when week changes
   useEffect(() => {
@@ -37,20 +62,45 @@ export default function Home() {
       try {
         await scheduleBlocks.refetch();
       } catch (error) {
-        console.error('Error fetching blocks for new week:', error);
+        // Ignore AbortError - it's expected when changing weeks quickly
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error('Error fetching blocks for new week:', error);
+        }
       }
     };
     
     fetchData();
-  }, [weekGrid.currentWeek, scheduleBlocks.refetch]);
+  }, [weekGrid.currentWeek]); // Removed scheduleBlocks.refetch from dependencies
 
-  // Handle block creation/editing with improved error handling
+  // Handle block creation/editing with enhanced functionality
   const handleSaveBlock = useCallback(async (data: BlockFormData) => {
     try {
       if (editingBlock) {
+        // Update existing block
         await scheduleBlocks.updateBlock(editingBlock.id, data);
+        toast.success('Bloque actualizado', 'El bloque se ha actualizado correctamente');
       } else {
-        await scheduleBlocks.createBlock(data);
+        // Create new block with enhanced functionality
+        const newBlock = await scheduleBlocks.createBlock(data, {
+          onSuccess: (block) => {
+            // Schedule reminder
+            ReminderService.scheduleReminder(block, {
+              minutesBefore: 15,
+              enabled: true,
+              type: 'notification'
+            });
+
+            // Update metrics
+            const updatedMetrics = MetricsCalculator.updateMetricsAfterBlockCreation(metrics, block);
+            setMetrics(updatedMetrics);
+
+            // Show success notification
+            toast.success(
+              'Bloque creado exitosamente',
+              `"${block.title}" ha sido agregado a tu calendario`
+            );
+          }
+        });
       }
       
       // Close form and reset state
@@ -58,20 +108,68 @@ export default function Home() {
       setEditingBlock(undefined);
       setSelectedTimeSlot(undefined);
     } catch (error) {
+      // Handle specific conflict errors
+      if (error instanceof Error && error.message.includes('se superpone')) {
+        toast.warning(
+          'Conflicto de horario detectado',
+          'Este bloque se superpone con otro bloque existente. Por favor, elige un horario diferente.'
+        );
+      } else {
+        toast.error(
+          'Error al guardar el bloque',
+          error instanceof Error ? error.message : 'Ha ocurrido un error inesperado'
+        );
+      }
       console.error('Error saving block:', error);
       // Error is already handled by the hook with user-friendly messages
     }
-  }, [editingBlock, scheduleBlocks]);
+  }, [editingBlock, scheduleBlocks, toast, metrics]);
 
   // Handle block deletion with confirmation
   const handleDeleteBlock = useCallback(async (blockId: string) => {
     try {
+      // Cancel any scheduled reminders
+      ReminderService.cancelReminder(blockId);
+      
       await scheduleBlocks.deleteBlock(blockId);
+      
+      toast.success('Bloque eliminado', 'El bloque ha sido eliminado correctamente');
+      
+      // Update metrics
+      const updatedMetrics = MetricsCalculator.calculateWeeklyMetrics(
+        scheduleBlocks.blocks.filter(b => b.id !== blockId), 
+        weekGrid.currentWeek
+      );
+      setMetrics(updatedMetrics);
     } catch (error) {
+      toast.error('Error al eliminar el bloque', 'No se pudo eliminar el bloque');
       console.error('Error deleting block:', error);
-      // Error is already handled by the hook
     }
-  }, [scheduleBlocks]);
+  }, [scheduleBlocks, toast, weekGrid.currentWeek]);
+
+  // Export calendar functionality
+  const handleExportCalendar = useCallback((format: 'google' | 'outlook' | 'ics') => {
+    if (scheduleBlocks.blocks.length === 0) {
+      toast.warning('Sin bloques para exportar', 'No hay bloques en la semana actual');
+      return;
+    }
+
+    try {
+      if (format === 'ics') {
+        CalendarSyncService.downloadICSFile(scheduleBlocks.blocks);
+        toast.success('Calendario exportado', 'El archivo .ics se ha descargado correctamente');
+      } else {
+        // For Google/Outlook, we'll open each event individually
+        scheduleBlocks.blocks.forEach(block => {
+          CalendarSyncService.syncBlockToExternalCalendar(block, format);
+        });
+        toast.info('Abriendo calendario externo', `Se abrirán ${scheduleBlocks.blocks.length} eventos en ${format}`);
+      }
+    } catch (error) {
+      toast.error('Error al exportar', 'No se pudo exportar el calendario');
+      console.error('Export error:', error);
+    }
+  }, [scheduleBlocks.blocks, toast]);
 
   // Handle block editing
   const handleEditBlock = useCallback((block: ScheduleBlockType) => {
@@ -323,16 +421,96 @@ export default function Home() {
           )}
         </main>
 
+        {/* Export Calendar Section */}
+        {currentWeekBlocks.length > 0 && (
+          <Card className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-foreground">Exportar Calendario</h3>
+                <p className="text-sm text-muted-foreground">
+                  Sincroniza tus bloques con calendarios externos
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExportCalendar('google')}
+                  className="flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Google
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExportCalendar('outlook')}
+                  className="flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Outlook
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExportCalendar('ics')}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  .ICS
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Productivity Metrics */}
+        {currentWeekBlocks.length > 0 && (
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-card-foreground mb-4">
+              Métricas de Productividad
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{metrics.totalBlocks}</div>
+                <div className="text-sm text-muted-foreground">Bloques Totales</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">
+                  {Math.round(metrics.totalMinutes / 60)}h
+                </div>
+                <div className="text-sm text-muted-foreground">Tiempo Total</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">
+                  {Math.round(metrics.averageBlockDuration)}m
+                </div>
+                <div className="text-sm text-muted-foreground">Duración Promedio</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">
+                  {metrics.weeklyProgress.efficiency}%
+                </div>
+                <div className="text-sm text-muted-foreground">Eficiencia</div>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Block Form Modal */}
         <BlockForm
           block={editingBlock}
           initialTimeSlot={selectedTimeSlot}
           categories={categories.categories}
+          existingBlocks={scheduleBlocks.blocks}
           onSave={handleSaveBlock}
           onCancel={handleCancelForm}
           isOpen={isFormOpen}
           weekStart={weekGrid.weekInfo.start}
         />
+
+        {/* Toast Notifications */}
+        <Toaster toasts={toasts} />
       </div>
     </ErrorBoundary>
   );

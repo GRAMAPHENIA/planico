@@ -17,17 +17,7 @@ import {
 } from '@/lib/api-middleware';
 
 // GET /api/schedule - Fetch blocks by week
-export const GET = withApiMiddleware(withErrorHandling(async (request: NextRequest) => {
-  RequestLogger.log(request);
-  
-  // Basic rate limiting
-  const clientIp = request.headers.get('x-forwarded-for') || 
-                   request.headers.get('x-real-ip') || 
-                   'unknown';
-  if (!RateLimiter.check(clientIp, 100, 60000)) {
-    return RateLimiter.getRateLimitResponse();
-  }
-
+export const GET = withErrorHandling(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const dateParam = searchParams.get('date');
   
@@ -53,33 +43,18 @@ export const GET = withApiMiddleware(withErrorHandling(async (request: NextReque
     },
   });
 
-  const response = ApiResponseHandler.success(blocks, 'Bloques obtenidos exitosamente');
-  RequestLogger.log(request, response);
-  return response;
-}));
+  return ApiResponseHandler.success(blocks, 'Bloques obtenidos exitosamente');
+});
 
 // POST /api/schedule - Create new block
-export const POST = withApiMiddleware(withErrorHandling(async (request: NextRequest) => {
-  RequestLogger.log(request);
-  
-  // Basic rate limiting
-  const clientIp = request.headers.get('x-forwarded-for') || 
-                   request.headers.get('x-real-ip') || 
-                   'unknown';
-  if (!RateLimiter.check(clientIp, 50, 60000)) {
-    return RateLimiter.getRateLimitResponse();
-  }
-
+export const POST = withErrorHandling(async (request: NextRequest) => {
   const body = await RequestValidator.validateJson(request);
-  
-  // Sanitize input data
-  const sanitizedData = InputSanitizer.validateAndSanitizeBlockData(body);
   
   // Validate request body with Zod
   const validatedData = createBlockSchema.parse({
-    ...sanitizedData,
-    startTime: new Date(sanitizedData.startTime),
-    endTime: new Date(sanitizedData.endTime),
+    ...body,
+    startTime: new Date(body.startTime),
+    endTime: new Date(body.endTime),
   });
 
   const { title, description, startTime, endTime, categoryId } = validatedData;
@@ -148,7 +123,5 @@ export const POST = withApiMiddleware(withErrorHandling(async (request: NextRequ
     },
   });
 
-  const response = ApiResponseHandler.created(newBlock, 'Bloque creado exitosamente');
-  RequestLogger.log(request, response);
-  return response;
-}));
+  return ApiResponseHandler.created(newBlock, 'Bloque creado exitosamente');
+});

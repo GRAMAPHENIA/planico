@@ -1,25 +1,21 @@
 import { PrismaClient } from '@prisma/client'
+import { getDefaultCategories } from '../src/lib/utils'
 
 const prisma = new PrismaClient()
 
 async function main() {
   // Create default categories
-  const categories = [
-    { name: 'Work', color: '#3B82F6' },      // Blue
-    { name: 'Personal', color: '#10B981' },   // Green
-    { name: 'Exercise', color: '#F59E0B' },   // Orange
-    { name: 'Study', color: '#8B5CF6' },      // Purple
-  ]
+  const categories = getDefaultCategories()
 
   for (const category of categories) {
     await prisma.category.upsert({
       where: { name: category.name },
-      update: {},
+      update: { color: category.color },
       create: category,
     })
   }
 
-  console.log('Default categories seeded successfully')
+  console.log('Categorías por defecto creadas exitosamente')
 }
 
 main()

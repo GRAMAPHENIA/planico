@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:quiet": "PRISMA_LOG_LEVEL=error next dev --turbopack --quiet",
+    "dev:verbose": "PRISMA_LOG_LEVEL=verbose next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

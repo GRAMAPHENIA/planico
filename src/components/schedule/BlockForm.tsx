@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ScheduleBlock, Category, TimeSlot, BlockFormData } from '@/lib/types';
 import { scheduleBlockSchema, type ScheduleBlockInput } from '@/lib/validations';
 import { formatTime, roundToTimeSlot, timeSlotToDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { ConflictChecker } from '@/lib/conflict-checker';
+import { ConflictWarning } from './ConflictWarning';
 
 // UI Components
 import {
@@ -34,6 +36,7 @@ interface BlockFormProps {
   initialTimeSlot?: TimeSlot;
   weekStart?: Date;
   categories: Category[];
+  existingBlocks?: ScheduleBlock[];
   onSave: (data: BlockFormData) => Promise<void>;
   onCancel: () => void;
   isOpen: boolean;
@@ -49,6 +52,7 @@ export function BlockForm({
   initialTimeSlot,
   weekStart = new Date(),
   categories,
+  existingBlocks = [],
   onSave,
   onCancel,
   isOpen,
@@ -65,6 +69,20 @@ export function BlockForm({
   
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ignoreConflicts, setIgnoreConflicts] = useState(false);
+
+  // Check for conflicts in real-time
+  const conflictResult = useMemo(() => {
+    if (!formData.startTime || !formData.endTime || ignoreConflicts) {
+      return { hasConflict: false, conflictingBlocks: [], suggestions: [] };
+    }
+
+    return ConflictChecker.checkForConflicts(
+      { startTime: formData.startTime, endTime: formData.endTime },
+      existingBlocks,
+      block?.id
+    );
+  }, [formData.startTime, formData.endTime, existingBlocks, block?.id, ignoreConflicts]);
 
   // Initialize form data
   useEffect(() => {
@@ -138,12 +156,19 @@ export function BlockForm({
     if (!validateForm()) {
       return;
     }
+
+    // Check for conflicts if not already ignored
+    if (conflictResult.hasConflict && !ignoreConflicts) {
+      // Don't submit, let the user see the conflict warning
+      return;
+    }
     
     setIsSubmitting(true);
     
     try {
       await onSave(formData);
-      onCancel(); // Close dialog on success
+      // Reset conflict ignore state
+      setIgnoreConflicts(false);
     } catch (error) {
       console.error('Error saving block:', error);
       setErrors({ 
@@ -335,6 +360,16 @@ export function BlockForm({
               <p className="text-sm text-red-500">{errors.categoryId}</p>
             )}
           </div>
+
+          {/* Conflict Warning */}
+          <ConflictWarning
+            conflictResult={conflictResult}
+            onIgnore={() => setIgnoreConflicts(true)}
+            onSuggestTime={(suggestion) => {
+              // TODO: Parse suggestion and update form times
+              console.log('Suggested time:', suggestion);
+            }}
+          />
 
           {/* Submit Error */}
           {errors.submit && (
